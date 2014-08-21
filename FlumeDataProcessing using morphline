@@ -1,1 +1,147 @@
-FlumeDataProcessing using morphline
+This document helps us to understand how data transformations happen from Flume to Apache SOLR.
+Apache Flume:
+Flume is a distributed, reliable, and available service for efficiently collecting, aggregating, and moving large amounts of data. It is robust and fault tolerant with tunable reliability mechanisms and many failover and recovery mechanisms. It uses a simple extensible data model that allows for online analytic application.
+The Basic Flume Configuration has the information such as 
+Source
+Channel
+Sink.
+Each component (source, sink or channel) in the flow has a name, type, and set of properties that are specific to the type and instantiation.
+
+# example.conf: Basic Flume configuration
+# Components on this agent
+agent.sources = r1
+agent.sinks = k1
+agent.channels = c1
+# Configuring the source
+agent.sources.r1.type = spooldir
+agent.sources.r1.spooldir= path
+
+# Configuring the sink
+agent.sinks.k1.type = hdfs
+
+# Use a channel which buffers events in memory
+agent.channels.c1.type = memory
+agent.channels.c1.capacity = 1000
+agent.channels.c1.transactionCapacity = 100
+
+Cloudera Morphline:
+Morphlines is a new open source framework that reduces the time and effort necessary to integrate, build, and change Hadoop processing applications that extract, transform, and load data into Apache Solr, HDFS and entire data warehouses, or analytic dashboards. It is very useful when we want integrate, build, or facilitate transformation pipelines without programming and without substantial MapReduce skills.
+
+Morphline Processing:
+Morphlines can be seen as an evolution of UNIX pipelines where the data model is generalized to work with streams of generic records, including arbitrary binary payloads. A morphline is an efficient way to consume records (e.g. Flume events, HDFS files,  RDBMS tables, or Apache Avro objects), turn them into a stream of records, and pipe the stream of records through a set of easily configurable transformations on the way to a target application such as Solr, for example as outlined in the following figure:
+
+In this figure, a Flume Source receives syslog events and sends them to a Flume Morphline Sink, which converts each Flume event to a record and pipes it into a readLine command. The readLine command extracts the log line and pipes it into a grok command. The grok command uses regular expression pattern matching to extract some substrings of the line. It pipes the resulting structured record into the loadSolr command. Finally, the loadSolrcommand loads the record into Solr, typically a SolrCloud. In the process, raw data or semi-structured data is transformed into structured data according to application modeling requirements.
+
+Flume- MorphlineSolrSink:
+This sink extracts data from Flume events, transforms it, and loads it in near-real-time into Apache Solr servers, which in turn serve queries to end users or search applications.
+Flume configuration for SOLR:
+agent.channels=solrchannel 
+agent.sources=spoolsource
+agent.sinks=solrSink  
+agent.channels.solrchannel.type=memory
+
+agent.channels.solrchannel.capacity = 100000
+agent.channels.solrchannel.transactionCapacity = 10000
+
+agent.sources.spoolsource.type=spooldir
+agent.sources.spoolsource.spoolDir=/tmp/logs
+agent.sources.spoolsource.fileHeader=true
+agent.sources.spoolsource.deserializer.maxLineLength=200000
+agent.sources.spoolsource.channels= solrchannel
+
+agent.sources.spoolsource.deletePolicy=immediate
+
+#agent.sources.spoolsource.selector.mapping.default= solrchannel
+
+agent.sinks.solrSink.type=org.apache.flume.sink.solr.morphline.MorphlineSolrSink
+agent.sinks.solrSink.channel=solrchannel
+agent.sinks.solrSink.batchSize=1000
+agent.sinks.solrSink.batchDurationMillis=1000
+agent.sinks.solrSink.morphlineFile=/etc/flume-ng/conf/morphline.conf
+agent.sinks.solrSink.morphlineId=morphline1
+
+
+Setting the Morphline Property in Flume:
+
+The Flume sink type , needs to be org.apache.flume.sink.solr.morphline.MorphlineSolrSink 
+
+　　　　agent.sinks.solrSink.type=org.apache.flume.sink.solr.morphline.MorphlineSolrSink
+
+This sink is well suited for use cases that stream raw data into HDFS and simultaneously extract, transform and load the same data into Solr (via MorphlineSolrSink).
+The ETL functionality is customizable using a morphline configuration file that defines a chain of transformation commands
+
+　　　　agent.sinks.solrSink.morphlineFile=/etc/flume-ng/conf/morphline.conf
+
+Flume reads the  morphline.conf  from  Flume configuration  and  process the transformations.
+
+
+ Morphline config 
+
+SOLR_LOCATOR : {
+  # Name of solr collection
+  collection : testCollection
+  
+  # ZooKeeper ensemble
+  zkHost : "localhost.localdomain:2181/solr"  
+}
+
+morphlines : [
+  {
+    id : morphline1
+    importCommands : ["org.kitesdk.**"]
+....................
+
+To view full config file, please visit the following link
+
+https://github.com/Aptude/Data-to-SOLR-sink-using-morphline/blob/master/Morphline%20Config  
+
+
+In Morphline config file 
+
+Firstly, We will specify the name of the Collection.
+
+A grok-dictionary is a config file that contains prefabricated regular expressions that can be referred to by name. grok patterns specify such a regex name, plus an optional output field name.
+The syntax is %{REGEX_NAME:OUTPUT_FIELD_NAME}
+
+　　　　file:"""/.*?/.*?/.*?/.*?/%{DATA:country}_%{DATA:timestamp}_%{DATA:filename}"""
+            message: """%{ DATA: event_message}"""
+
+The input line is expected in the "message"(event_message) input field.
+
+
+Transforming the  TimeStamp:
+
+ Our Input timestamp format comes in a format  ["yyMMddHHmm"] . We are transforming the data in the required format as  Output timestamp format “yyyy-MM-dd HH:mm”
+
+InputFormat : 1406210620      Transforming it to  Outputformat : 2014-06-21 06:20
+
+In message we will get message related to every event 
+
+Java transformations:
+
+As you can see, custom Morphline commands can be defined in a command file  so you don’t have to compile them or write a Java class beforehand. This is an extremely useful feature; using the JavaBuilder class the framework compiles the commands at runtime. Our Custom Java Code should look like 
+
+ java {
+          imports : """
+               Namespaces
+
+          """
+          code: """
+            .....................................
+            .....................................
+           """
+
+We are making some JAVA transformations required for our code 
+We are getting country and  Filename in lowercase, In order to Transform them to uppercase , we make some code transformations.
+
+record.replaceValues("country",((String)record.getFirstValue("country")).toUpperCase());
+record.replaceValues("filename",fileName.substring(0, fileName.indexOf('.')).toUpperCase());
+
+Data in event_message comes in a single line, we are making some transformations in order to break them into different lines.
+
+eventMessage= eventMessage.replaceAll("\\|","<br>");
+eventMessage= eventMessage.replaceAll("\\[tab\\]","&nbsp\\;&nbsp\\;&nbsp\\;&nbsp\\;");
+
+
+
+
