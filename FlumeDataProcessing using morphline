@@ -1,6 +1,6 @@
 This document helps us to understand how data transformations happen from Flume to Apache SOLR.
 Apache Flume:
-Flume is a distributed, reliable, and available service for efficiently collecting, aggregating, and moving large amounts of data. It is robust and fault tolerant with tunable reliability mechanisms and many failover and recovery mechanisms. It uses a simple extensible data model that allows for online analytic application.
+Flume is a distributed, reliable, and available service for efficiently collecting, aggregating, and moving large amounts of data. It is robust and fault tolerant with tunable reliability mechanisms and many failover and recovery mechanisms. 
 The Basic Flume Configuration has the information such as 
 Source
 Channel
@@ -33,7 +33,7 @@ Morphlines can be seen as an evolution of UNIX pipelines where the data model is
 In this figure, a Flume Source receives syslog events and sends them to a Flume Morphline Sink, which converts each Flume event to a record and pipes it into a readLine command. The readLine command extracts the log line and pipes it into a grok command. The grok command uses regular expression pattern matching to extract some substrings of the line. It pipes the resulting structured record into the loadSolr command. Finally, the loadSolrcommand loads the record into Solr, typically a SolrCloud. In the process, raw data or semi-structured data is transformed into structured data according to application modeling requirements.
 
 Flume- MorphlineSolrSink:
-This sink extracts data from Flume events, transforms it, and loads it in near-real-time into Apache Solr servers, which in turn serve queries to end users or search applications.
+The MorphlineSolr sink extracts data from Flume events, transforms it, and loads it into Apache Solr servers, which in turn serve queries to users or search applications.
 Flume configuration for SOLR:
 agent.channels=solrchannel 
 agent.sources=spoolsource
@@ -119,29 +119,29 @@ In message we will get message related to every event
 
 Java transformations:
 
-As you can see, custom Morphline commands can be defined in a command file  so you don’t have to compile them or write a Java class beforehand. This is an extremely useful feature; using the JavaBuilder class the framework compiles the commands at runtime. Our Custom Java Code should look like 
-
+The java command provides required scripting support for Java. The  java command compiles and executes the given Java code block in morphline, wrapped into a Java method along with a Java class definition that consists the given import statements.
+Java code should be placed in  “code ” block
  java {
           imports : """
                Namespaces
 
           """
           code: """
-            .....................................
-            .....................................
+            String eventMessage = (String)record.getFirstValue("event_message");
+            Do some transformations
+　　　　record.replaceValues("event_message",eventMessage);
+　　　　return child.process(record);
            """
 
 We are making some JAVA transformations required for our code 
+
+
 We are getting country and  Filename in lowercase, In order to Transform them to uppercase , we make some code transformations.
 
 record.replaceValues("country",((String)record.getFirstValue("country")).toUpperCase());
 record.replaceValues("filename",fileName.substring(0, fileName.indexOf('.')).toUpperCase());
 
-Data in event_message comes in a single line, we are making some transformations in order to break them into different lines.
-
-eventMessage= eventMessage.replaceAll("\\|","<br>");
-eventMessage= eventMessage.replaceAll("\\[tab\\]","&nbsp\\;&nbsp\\;&nbsp\\;&nbsp\\;");
-
-
+Here, I am performing a simple transformation, country  data from lowercase to uppercase.
+We can perform the necessary transformations required in our java code block as defined.
 
 
