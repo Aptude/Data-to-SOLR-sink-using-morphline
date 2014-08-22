@@ -25,10 +25,10 @@ agent.channels.c1.capacity = 1000
 agent.channels.c1.transactionCapacity = 100
 
 Cloudera Morphline:
-Morphlines is a new open source framework that reduces the time and effort necessary to integrate, build, and change Hadoop processing applications that extract, transform, and load data into Apache Solr, HDFS and entire data warehouses, or analytic dashboards. It is very useful when we want integrate, build, or facilitate transformation pipelines without programming and without substantial MapReduce skills.
+Cloudera Morphlines is a new open source framework which reduces the time and effort necessary to integrate, build, and change Hadoop processing applications that extract, transform, and load data into HDFS, SOLR and entire data warehouses, or analytic dashboards. It would be very useful when we need to integrate, build, or facilitate transformation pipelines without programming andsubstantial MapReduce skills.
 
 Morphline Processing:
-Morphlines can be seen as an evolution of UNIX pipelines where the data model is generalized to work with streams of generic records, including arbitrary binary payloads. A morphline is an efficient way to consume records (e.g. Flume events, HDFS files,  RDBMS tables, or Apache Avro objects), turn them into a stream of records, and pipe the stream of records through a set of easily configurable transformations on the way to a target application such as Solr, for example as outlined in the following figure:
+Morphlines can be seen as an evolution of UNIX pipelines where the data model is generalized to work with streams of generic records, including arbitrary binary payloads. A morphline is an efficient way to consume records , turn them into a stream of records, and pipe the stream of records through a set of easily configurable transformations on the way to a target application such as Solr, for example as outlined in the following figure:
 
 In this figure, a Flume Source receives syslog events and sends them to a Flume Morphline Sink, which converts each Flume event to a record and pipes it into a readLine command. The readLine command extracts the log line and pipes it into a grok command. The grok command uses regular expression pattern matching to extract some substrings of the line. It pipes the resulting structured record into the loadSolr command. Finally, the loadSolrcommand loads the record into Solr, typically a SolrCloud. In the process, raw data or semi-structured data is transformed into structured data according to application modeling requirements.
 
@@ -142,6 +142,6 @@ record.replaceValues("country",((String)record.getFirstValue("country")).toUpper
 record.replaceValues("filename",fileName.substring(0, fileName.indexOf('.')).toUpperCase());
 
 Here, I am performing a simple transformation, country  data from lowercase to uppercase.
-We can perform the necessary transformations required in our java code block in morphline.
+We can perform the necessary transformations required in our java code block as defined.
 
 
