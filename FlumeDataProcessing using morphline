@@ -142,6 +142,6 @@ record.replaceValues("country",((String)record.getFirstValue("country")).toUpper
 record.replaceValues("filename",fileName.substring(0, fileName.indexOf('.')).toUpperCase());
 
 Here, I am performing a simple transformation, country  data from lowercase to uppercase.
-We can perform the necessary transformations required in our java code block as defined.
+We can perform the necessary transformations required in our java code block in morphline.
 
 
